@@ -4,6 +4,28 @@
 # enormous amount of try outs, discovery . etc..
 
 
+dag = random.graph(cnames, 
+                   num = 1, # For now, we only need one network ... 
+                   method = "melancon", 
+                   max.in.degree=max_degree, 
+                   max.out.degree=max_degree )
+
+
+test <- list( 
+          x1= list(a=1,b=2),
+          x2= list(a=3,b=4))
+
+test2<-lapply(test, function(x) x[["a"]])
+
+
+myegbn$nodes$x5$powernode
+
+
+test5 <- sum(unlist(test3))
+
+sum(test3)
+test4 <- sapply(test3, sum)
+sum(test4)
 
 print(net.coefs2formula(c("x1"=3,"x2"=3)))
 print(net.coefs2formula(coefs))

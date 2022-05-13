@@ -1,6 +1,9 @@
 library(bnlearn)
 library(Rgraphviz)
 
+#
+#BiocManager::install("Rgraphviz")
+
 
 #creates an extended GBN with random formulas per node
 egbn.create = function(net, p_pwr, p_int){
@@ -102,3 +105,23 @@ egbn.sample = function(egbn ,count=1, sd=1)
   result <- df
 }
 
+egbn.printmodels = function(egbn)
+{
+  models <-lapply(myegbn$nodes, function (n) n$mean)
+  for (n in names(models))
+  {
+    print(paste(n, " = ", models[n]))
+  }
+}
+
+egbn.totalinteractions = function(egbn)
+{
+  tmp <-lapply(myegbn$nodes, function (n) if ( is.null(n[["interactionnodes"]])) { c(0) } else { c(1)})
+  result <- sum(unlist(tmp))
+}
+
+egbn.totalpowers = function(egbn)
+{
+  tmp <-lapply(myegbn$nodes, function (n) if ( is.null(n[["powernode"]])) { c(0) } else { c(1)})
+  result <- sum(unlist(tmp))
+}
