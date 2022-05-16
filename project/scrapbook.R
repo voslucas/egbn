@@ -284,11 +284,19 @@ bn = custom.fit(dag, list(
 bn$F
 A2 = list(coef = c("(Intercept)" = 1), sd = 1)
 
-library(Rgraphviz)
-library(pcalg)
+# linear model selection methods
+#inst
+library(glmnet)
+y <- testset$x1
+x <- data.matrix(testset[, c('x2', 'x3', 'x4', 'x5')])
 
-set.seed(101)
-myDAG <- randomDAG(n = 20, prob= 0.2, lB = 0.1, uB = 1)
-## require(Rgraphviz)
-plot(myDAG)
+cv_model <- cv.glmnet(x, y, alpha = 1)
 
+#find optimal lambda value that minimizes test MSE
+best_lambda <- cv_model$lambda.min
+best_lambda
+
+plot(cv_model)
+
+best_model <- glmnet(x, y, alpha = 1, lambda = best_lambda)
+coef(best_model)

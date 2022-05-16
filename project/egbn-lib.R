@@ -1,12 +1,13 @@
 library(bnlearn)
 library(Rgraphviz)
 
-#
+#If you need RGraphviz ->
+#install.packages("BiocManager")
 #BiocManager::install("Rgraphviz")
 
 
-#creates an extended GBN with random formulas per node
-egbn.create = function(net, p_pwr, p_int){
+#Creates an extended BN with random formulas per node
+egbn.addmodels = function(net, p_pwr, p_int){
   
   if (class(net) != "bn") {
     stop("'net' should be of class 'bn' ")
@@ -20,14 +21,15 @@ egbn.create = function(net, p_pwr, p_int){
     # get node object
     cn <- net$nodes[[node]]
     
-    # We need the parentCount multiple times.
+    # Cache the parentCount, we need it multiple times.
     parentCount <- length(cn$parents)
     
     # With k parents we need at least intercept + k coefs.
     coefs = sample(allowed_coefvalues,1+parentCount)
     
-    # The intercept column name is set to "1", which makes it easier to generate 
-    # a formula based on this named vector of coefficients.
+    # The intercept column name is set to "1", 
+    # which makes it easier to generate a formula 
+    # based on a named vector of coefficients.
     coefnames = c(c("1"),c(cn$parents))
     names(coefs) <- coefnames
     
@@ -61,14 +63,15 @@ egbn.create = function(net, p_pwr, p_int){
       
     }
     
-    #store the coefs and formula of the mean, into the node 
+    #store the coefs and the model (formula of the mean), into the node 
     cn$coefs <- coefs
-    cn$mean  <- egbn.coefs2formula(coefs)
+    cn$model <- egbn.coefs2formula(coefs)
     
     #store the manipulated node back 
     net$nodes[[node]] <- cn
   }
   
+  #return the extend GBN, a BN with node models 
   result <- net
 }
 
@@ -77,6 +80,10 @@ egbn.create = function(net, p_pwr, p_int){
 #Converts a named vector of coefficients to an expression which can be evaluated.
 egbn.coefs2formula = function(named_coefs){
   terms <- paste(named_coefs,names(named_coefs) , sep="*")
+  #first term is always : Intercept * 1 ; 
+  #for clarity , we remove the *1
+  terms[1] <- substr(terms[1],1,nchar(terms[1])-2)
+  #return the model/formula of the terms.
   result <- paste(terms, sep="", collapse=" + ")
 }
 
@@ -85,7 +92,7 @@ egbn.coefs2formula = function(named_coefs){
 #Draw samples from the eGBN as a dataframe
 egbn.sample = function(egbn ,count=1, sd=1) 
 {
-  nc <-length(dag$nodes)
+  nc <-length(egbn$nodes)
   
   # create empty dataframe of the correct size
   df <- data.frame( matrix(data=NA, 
@@ -94,34 +101,66 @@ egbn.sample = function(egbn ,count=1, sd=1)
                            dimnames =list(NULL, names(egbn$nodes))))
   
   # fill each column with samples from N(mean, sd)
-  # where mean is calculated based on the formula attached to each node.
+  # where mean is calculated based on the model attached to each node.
+  
+  # we need the correct ordering  
   nodes <- node.ordering(egbn)
+  
   for(node in nodes) {
     cn <- egbn$nodes[[node]]
-    # parse the expression 
-    f  <- parse(text=cn$mean)
+    # parse the expression of the model associated with this node
+    f  <- parse(text=cn$model)
+    # fill the column of the dataframe, based on the model f.
     df[, node] <- rnorm(count, eval(f,envir=df),sd)
   }
   result <- df
 }
 
+
 egbn.printmodels = function(egbn)
 {
-  models <-lapply(myegbn$nodes, function (n) n$mean)
+  models <-lapply(myegbn$nodes, function (n) n$model)
   for (n in names(models))
   {
-    print(paste(n, " = ", models[n]))
+    cat(paste(n, " = ", models[n], "\n") )
   }
 }
 
+#returns the number of interactions found in the models of the eGBN
 egbn.totalinteractions = function(egbn)
 {
   tmp <-lapply(myegbn$nodes, function (n) if ( is.null(n[["interactionnodes"]])) { c(0) } else { c(1)})
   result <- sum(unlist(tmp))
 }
 
+#returns the number of power terms found in the models of the eGBN
 egbn.totalpowers = function(egbn)
 {
   tmp <-lapply(myegbn$nodes, function (n) if ( is.null(n[["powernode"]])) { c(0) } else { c(1)})
   result <- sum(unlist(tmp))
 }
+
+
+
+# extend the dataset with power- and interaction terms
+egbn.augmentdata = function(data){
+  
+  # add power and interaction terms
+  cns <- colnames(data)
+  
+  if (length(cns)>100){
+    stop("augmenting data frame with more then 100 variables is not feasable.")
+  }
+  
+  for (i in 1:length(cns))
+  {
+    for (i2 in i:length(cns))
+    {
+      newcn = paste0(cns[i],cns[i2])
+      data[,newcn] = data[cns[i]]*data[cns[i2]]
+    }
+  }
+  result <- data
+}
+
+
