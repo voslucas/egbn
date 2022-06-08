@@ -9,9 +9,9 @@ print(paste0("args are:", args))
 
 #Experiment settings
 id <- 1
-mysd <- 0.05
+mysd <- 0.1
 nodecount <- 1000   # number of nodes in the DAG
-datasize <- 500   # size of the train / test set
+datasize <- 5000   # size of the train / test set
 chance_int <- 0.25 # chance of an interaction in a node formula 
 chance_pwr <- 0.25 # chance of a power term in a node formula
 max_degree <- 3   # maximum degree of a node ( in and out)
@@ -48,10 +48,10 @@ print( paste("Total interaction terms in eGBN: ", egbn.totalinteractions(myegbn)
 print( paste("Total       power terms in eGBN: ", egbn.totalpowers(myegbn)))
 #egbn.printmodels(myegbn)
 
-stop("even")
-
 # STEP 3 - draw samples from EGBN
 trainset <- egbn.sample(myegbn,datasize,mysd)
+
+stop("even")
 
 #STEP 3B - mean center + scale dataset
 if (do_balance) {

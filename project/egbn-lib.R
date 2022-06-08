@@ -7,15 +7,18 @@ library(glmnet)
 #BiocManager::install("Rgraphviz")
 cachedegbdata__ = NULL
 
+allowed_coefvalues <- -9:9
+allowed_coefvalues <- allowed_coefvalues[allowed_coefvalues!=0]
+
 #Get n randomcoefs  
 egbn.randomcoefs = function(n){
   #Note: we initial sampled from nice integer values 1:10 
   #      but this results in Infite values on large networks
-  #result <- sample(allowed_coefvalues,n)
+  result <- sample(allowed_coefvalues,n) / 10.0
   #result <- runif(n,min=-0.49,max=0.49)
   #result <- runif(n,min=-0.099,max=0.099)
   
-  result <- runif(n,min=-0.99,max=0.99)
+  #result <- runif(n,min=-0.099,max=0.099)
 }
 
 
@@ -74,6 +77,10 @@ egbn.addmodels = function(net, p_pwr, p_int){
     # With k parents we need at least intercept + k coefs.
     coefs = egbn.randomcoefs(1+parentCount)
     
+    # If one of the parents have an interaction or power term already
+    # reduce the coefs , to limit the numerical growth.
+    
+    
     # The intercept column name is set to "1", 
     # which makes it easier to generate a formula 
     # based on a named vector of coefficients.
@@ -88,7 +95,7 @@ egbn.addmodels = function(net, p_pwr, p_int){
       pwr_node <- sample(cn$parents,1)
       
       # Add this node to the list of named coef
-      coefs = append(coefs, egbn.randomcoefs(1))
+      coefs = append(coefs, egbn.randomcoefs(1)/10.0)
       names(coefs)[length(coefs)] <- paste(pwr_node,"^2",sep="")
       
       # Also store the name of the power term inside the node for easy reference
@@ -102,7 +109,7 @@ egbn.addmodels = function(net, p_pwr, p_int){
       int_nodes <- sample(cn$parents, size=2, replace =F)
       
       # Add this term to the list of named coef
-      coefs = append(coefs, egbn.randomcoefs(1))
+      coefs = append(coefs, egbn.randomcoefs(1)/10.0 ) 
       names(coefs)[length(coefs)] <- paste(int_nodes,collapse = "*")
       
       # Also store the names of the interaction terms inside the node.
@@ -384,15 +391,18 @@ egbn.sample = function(egbn ,count, samplesd)
     
     f  <- parse(text=cn$model)
     # fill the column of the dataframe, based on the model f.
+
+    df[, node] <- rnorm(count, eval(f,envir=df),samplesd)    
+  
     
-    means <- eval(f,envir=df);
-    if (length(means)==1){
-      df[, node] <- rnorm(count, eval(f,envir=df),samplesd)
-    } else
-    {
-      localsd = sd(means)
-      df[, node] <- rnorm(count, eval(f,envir=df),localsd)
-    }
+    #means <- eval(f,envir=df)
+    #if (length(means)==1){
+    #  df[, node] <- rnorm(count, eval(f,envir=df),samplesd)
+    #} else
+    #{
+    #  localsd = sd(means)
+    #  df[, node] <- rnorm(count, eval(f,envir=df),localsd)
+    #}
 
    
   }
