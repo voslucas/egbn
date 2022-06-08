@@ -13,23 +13,16 @@ egbn.randomcoefs = function(n){
   #      but this results in Infite values on large networks
   #result <- sample(allowed_coefvalues,n)
   #result <- runif(n,min=-0.49,max=0.49)
+  #result <- runif(n,min=-0.099,max=0.099)
+  
   result <- runif(n,min=-0.99,max=0.99)
 }
+
+
 
 # return a bic score of a LM based on augmented data
 egbn.customscore = function(node, parents, data, args) {
 
-     #augment the data every call is very slow.
-     #TODO cache the complete augmenteddata ?
-     
-     #if (is.null(cachedegbdata__)){
-     #   cachedegbdata__ <<- egbn.augmentdata(data)
-     #   print("cache created")
-     #}
-     
-     #workdata = cachedegbdata__[parents]
-     #TODO parents on the cached dataset is not sufficient.
-     #     we need the augmented parents!
      workdata = data[parents]
      workdata = egbn.augmentdata(workdata)
      
@@ -40,10 +33,24 @@ egbn.customscore = function(node, parents, data, args) {
     
      #extend workdata with node data
      workdata[node] = data[node]
-     
      result <- -BIC(lm(model, data = workdata)) / 2.0
 }
 
+
+egbn.customscore_old = function(node, parents, data, args) 
+{
+  workdata = data[parents]
+  #workdata = egbn.augmentdata(workdata)
+  
+  if (length(parents) == 0)
+    model = as.formula(paste(node, "~ 1"))     
+  else     
+    model = as.formula(paste(node, "~", paste(names(workdata), collapse = "+")))
+  
+  #extend workdata with node data
+  workdata[node] = data[node]
+  result <- -BIC(lm(model, data = workdata)) / 2.0
+}
 
 
 #Creates an extended BN with random formulas per node
@@ -120,7 +127,9 @@ egbn.coefs2formula = function(named_coefs){
   terms <- paste(named_coefs,names(named_coefs) , sep="*")
   #first term is always : Interceptvalue * 1 ; 
   #for clarity , we remove the *1
-  terms[1] <- substr(terms[1],1,nchar(terms[1])-2)
+  if (names(named_coefs)[1]==1) {
+    terms[1] <- substr(terms[1],1,nchar(terms[1])-2)
+  }
   #return the model/formula of the terms.
   result <- paste(terms, sep="", collapse=" + ")
 }
@@ -147,6 +156,16 @@ egbn.getk = function(egbn) {
   result <- sum
   
 }
+
+
+#Get the free nodes of the egbn
+#Free nod defined as :no parents  and no children, so unattached node
+egbn.getfreenodes = function(egbn) {
+  
+  tmp <-unlist(lapply(egbn$nodes, function (n) ((length(n$parents)==0) & (length(n$children)==0))))
+  result <- names(tmp[tmp==TRUE])
+}
+
 
 egbn.score = function(egbn, data, method = "loglik", debug= FALSE){
   
@@ -343,7 +362,7 @@ egbn.fit.per.node = function(cn, data, method = "lm", augment = FALSE){
 
 
 #Draw samples from the eGBN as a dataframe
-egbn.sample = function(egbn ,count=1, sd=1) 
+egbn.sample = function(egbn ,count, samplesd) 
 {
   nc <-length(egbn$nodes)
   
@@ -362,9 +381,20 @@ egbn.sample = function(egbn ,count=1, sd=1)
   for(node in nodes) {
     cn <- egbn$nodes[[node]]
     # parse the expression of the model associated with this node
+    
     f  <- parse(text=cn$model)
     # fill the column of the dataframe, based on the model f.
-    df[, node] <- rnorm(count, eval(f,envir=df),sd)
+    
+    means <- eval(f,envir=df);
+    if (length(means)==1){
+      df[, node] <- rnorm(count, eval(f,envir=df),samplesd)
+    } else
+    {
+      localsd = sd(means)
+      df[, node] <- rnorm(count, eval(f,envir=df),localsd)
+    }
+
+   
   }
   result <- df
 }
@@ -421,6 +451,11 @@ egbn.augmentdata = function(data){
   result <- data
 }
 
+
+# simple utility function 
+egbn.log = function(arg){
+  print(arg)
+}
 
 
 

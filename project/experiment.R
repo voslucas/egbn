@@ -47,7 +47,6 @@ print("ground   score on trainset")
 print(score(myegbn, trainset))
 
 
-
 # STEP 5 - report hamming distance of the cpdags
 print("hamdistance on recoverd vs original dag")
 print(hamming(testdag,myegbn))
