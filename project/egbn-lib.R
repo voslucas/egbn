@@ -2,10 +2,8 @@ library(bnlearn)
 library(Rgraphviz)
 library(glmnet)
 
-#If you need RGraphviz ->
-#install.packages("BiocManager")
-#BiocManager::install("Rgraphviz")
-cachedegbdata__ = NULL
+#Unused ; idea was to cache EGBN 
+cachedegbndata__ = NULL
 
 allowed_coefvalues <- -9:9
 allowed_coefvalues <- allowed_coefvalues[allowed_coefvalues!=0]
@@ -14,14 +12,12 @@ allowed_coefvalues <- allowed_coefvalues[allowed_coefvalues!=0]
 egbn.randomcoefs = function(n){
   #Note: we initial sampled from nice integer values 1:10 
   #      but this results in Infite values on large networks
+  
   result <- sample(allowed_coefvalues,n) / 10.0
   #result <- runif(n,min=-0.49,max=0.49)
   #result <- runif(n,min=-0.099,max=0.099)
-  
   #result <- runif(n,min=-0.099,max=0.099)
 }
-
-
 
 # return a bic score of a LM based on augmented data
 egbn.customscore = function(node, parents, data, args) {
@@ -40,19 +36,55 @@ egbn.customscore = function(node, parents, data, args) {
 }
 
 
-egbn.customscore_old = function(node, parents, data, args) 
+
+# TODO :this is SLOW.. 
+# it would benefit from an cached precalculated augmented dataset
+egbn.customscore_glm = function(node, parents, data, args) 
 {
-  workdata = data[parents]
-  #workdata = egbn.augmentdata(workdata)
   
-  if (length(parents) == 0)
-    model = as.formula(paste(node, "~ 1"))     
-  else     
-    model = as.formula(paste(node, "~", paste(names(workdata), collapse = "+")))
+  if (length(parents)<=1) {
+    result <- egbn.customscore(node,parents,data, args)
+  } else
+  {
+    workdata = data[parents]
+    workdata = egbn.augmentdata(workdata)
+    dcols = names(workdata)
+    workdata[node] = data[node]
+    
+    cv_model <- cv.glmnet(data.matrix(workdata[dcols]), 
+                          data.matrix(workdata[node]), alpha = 1)
+    
+    #find optimal lambda value that minimizes test MSE
+    best_lambda <- cv_model$lambda.min
+    
+    best_model <- glmnet(data.matrix(workdata[dcols]), 
+                         data.matrix(workdata[node]), alpha = 1, 
+                         lambda = best_lambda, keep=TRUE)
+    
+    # BIC's / residuals etc. are not directly available for this model
+    # but we have done "variable selection"  based on LASSO ..
+    # we use these selected nodes to build a modelstring 
+    # but simply use the existing BIC/LM 
+    
+    ctemp <- coefficients(best_model)[,1]
+    #remove unused 
+    ctempfilter <- ctemp[ctemp!=0]
+    #replace the term Intercept, if needed. (sometimes there is not intercept)
+    if (names(ctempfilter)[1] == "(Intercept)") {
+      names(ctempfilter)[1] <- "1"
+    }
   
-  #extend workdata with node data
-  workdata[node] = data[node]
-  result <- -BIC(lm(model, data = workdata)) / 2.0
+    #build 
+    model = as.formula(paste(node, "~", paste(names(ctempfilter), collapse = "+")))
+    
+    
+    #model1 <- egbn.coefs2formula(ctempfilter)
+    #fittedformula <- as.formula(model1)
+    
+    # this allows us to compare BIC 
+    result <- -BIC(lm(model, data = workdata)) / 2.0    
+    
+  }
 }
 
 
@@ -87,6 +119,9 @@ egbn.addmodels = function(net, p_pwr, p_int){
     coefnames = c(c("1"),c(cn$parents))
     names(coefs) <- coefnames
     
+    # remember if we need to scale down the sampled coefficients
+    scaledown = FALSE;
+    
     # With p_pwr chance, we add an power term of one the parents.
     p_pwr_sample =runif(1)
     if (parentCount>0 & p_pwr_sample<p_pwr) {
@@ -95,11 +130,13 @@ egbn.addmodels = function(net, p_pwr, p_int){
       pwr_node <- sample(cn$parents,1)
       
       # Add this node to the list of named coef
-      coefs = append(coefs, egbn.randomcoefs(1)/10.0)
+      coefs = append(coefs, egbn.randomcoefs(1))
       names(coefs)[length(coefs)] <- paste(pwr_node,"^2",sep="")
       
       # Also store the name of the power term inside the node for easy reference
       cn$powernode = pwr_node
+      
+      scaledown = TRUE;
     }
     
     p_int_sample = runif(1)
@@ -109,12 +146,18 @@ egbn.addmodels = function(net, p_pwr, p_int){
       int_nodes <- sample(cn$parents, size=2, replace =F)
       
       # Add this term to the list of named coef
-      coefs = append(coefs, egbn.randomcoefs(1)/10.0 ) 
+      coefs = append(coefs, egbn.randomcoefs(1) ) 
       names(coefs)[length(coefs)] <- paste(int_nodes,collapse = "*")
       
       # Also store the names of the interaction terms inside the node.
       cn$interactionnodes = int_nodes
       
+      scaledown = TRUE;
+    }
+    
+    #scale down coefs when there interaction or power terms.
+    if (scaledown) {
+      coefs = coefs/10.0
     }
     
     #store the coefs and the model (formula of the mean), into the node 
@@ -274,6 +317,9 @@ egbn.fit = function(egbn, data, method = "lm" , augment = FALSE)
   }
   #return fitted egbn
   #return the extend GBN, a BN with node models 
+  egbn$fitted = TRUE
+  egbn$fitted_method = method
+  egbn$fitted_augmented = augment
   result <- egbn
 }
 
@@ -332,7 +378,7 @@ egbn.fit.per.node = function(cn, data, method = "lm", augment = FALSE){
     
   } else if (method=="glm")
   {
-    # in this model , we 
+    # in this model , we use LASSO 
     # zoek naar de lamba
     cv_model <- cv.glmnet(data.matrix(workdata[dcols]), 
                           data.matrix(workdata[cn$name]), alpha = 1)
@@ -431,6 +477,78 @@ egbn.totalpowers = function(egbn)
 {
   tmp <-lapply(egbn$nodes, function (n) if ( is.null(n[["powernode"]])) { c(0) } else { c(1)})
   result <- sum(unlist(tmp))
+}
+
+egbn.getnodeswithinteraction = function (egbn){
+  
+  if (length(egbn$fitted)==1) {
+    #for each node, get the formula and extract interaction nodes..
+    result<-unique(unlist(lapply(egbn$nodes, function(n) egbn.extractinteractiontermsformula(n))))
+  } else
+  {
+    tmp = lapply(egbn$nodes, function (n) if ( !is.null(n[["interactionnodes"]])) { n[["interactionnodes"]] })
+    names(tmp) <- NULL
+    result <- unlist(tmp)
+  }
+}
+
+egbn.getnodeswithpower = function (egbn){
+  if (length(egbn$fitted)==1) {
+    result<-unique(unlist(lapply(egbn$nodes, function(n) egbn.extractpowertermsformula(n))))
+    
+  }else{
+   tmp = lapply(egbn$nodes, function (n) if ( !is.null(n[["powernode"]])) { n[["powernode"]] })
+   names(tmp) <- NULL
+   result <- unlist(tmp)
+  }
+}
+
+#extracts the node names in a formula which represents powerterms.
+#for example, a formula : 1+ 2*x4 + 3*x2 + 4*x1x1 + 2*x1x4 
+#will return x1 as the node name used as power term.
+egbn.extractpowertermsformula = function (modelstring ){
+  
+  #remove all space of formula
+  f <-gsub(" ", "", modelstring, fixed = TRUE)
+  
+  #split all + and * parts
+  tmp <-unlist(strsplit(unlist(strsplit(f,"+",fixed=TRUE)),"*",fixed=TRUE))
+  
+  #only use the parts starting with an x
+  tmp2 <- tmp[startsWith(tmp,"x")]
+
+  #only use the parts that have 2 x-s..
+  tmp3<-tmp2[lapply(strsplit(tmp2,"x",fixed=TRUE), function(n) length(n)) ==3]
+
+  #power terms
+  tmp4 <- unlist(lapply(strsplit(tmp3,"x",fixed=TRUE) , function (n) if (n[2]==n[3]) {n[2]}))
+  
+  #restore the x in front of this list
+  result <- unlist(lapply(tmp4, function(n) paste0("x",n)))
+}
+
+#extracts the node names in a formula which represents interactions
+#for example, a formula : 1+ 2*x4 + 3*x2 + 4*x1x1 + 2*x1x4 
+#will return x1 and x4 as node names used in an interaction term.
+egbn.extractinteractiontermsformula = function (formulastring ){
+  
+  #remove all space of formula
+  f <-gsub(" ", "", formulastring, fixed = TRUE)
+  
+  #split all + and * parts
+  tmp <-unlist(strsplit(unlist(strsplit(f,"+",fixed=TRUE)),"*",fixed=TRUE))
+  
+  #only use the parts starting with an x
+  tmp2 <- tmp[startsWith(tmp,"x")]
+  
+  #only use the parts that have 2 x-s..
+  tmp3<-tmp2[lapply(strsplit(tmp2,"x",fixed=TRUE), function(n) length(n)) ==3]
+  
+  #power terms
+  tmp4 <- unlist(lapply(strsplit(tmp3,"x",fixed=TRUE) , function (n) if (n[2]!=n[3]) {c(n[2],n[3])}))
+  
+  #restore the x in front of this list
+  result <- unlist(lapply(tmp4, function(n) paste0("x",n)))
 }
 
 

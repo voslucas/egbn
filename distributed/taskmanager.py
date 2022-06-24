@@ -9,13 +9,14 @@ import random
 
 from azure.storage.common import CloudStorageAccount
 from subprocess import PIPE
-from azure.common import (
-    AzureConflictHttpError,
-    AzureMissingResourceHttpError,
-)
 
-# Hardcoded SAS key to the storage account
-SAS = '#PUT YOUR AZURE STORAGE ACCOUNT SAS KEY HERE'
+
+# SAS key to the storage account from Environment
+# Reminder: a SAS key is not a storage account key... 
+SAS = os.getenv('SASKEY')
+
+#On windows, environment var can contain quotes. strip them. 
+SAS = SAS.replace('"','')
 
 TASKS_DIR = 'tasks'
 RESULTS_DIR = 'results'
@@ -28,7 +29,7 @@ RESULTS_DIR = 'results'
 class TaskManager():
     def __init__(self, queue):
         #read config
-        self.account = CloudStorageAccount(account_name="pythontasks", sas_token=SAS)
+        self.account = CloudStorageAccount(account_name="egbntasks", sas_token=SAS)
         self.service = self.account.create_file_service()
         self.share = queue
         self.service.create_share(self.share, fail_on_exist=False)
@@ -50,10 +51,10 @@ class TaskManager():
             name = os.path.splitext(base)[0]  
             ext = os.path.splitext(base)[1]
             if ext==".tsk":
-                print("Found a task.")
-                exists = self.service.exists(self.share, TASKS_DIR, name + ".lck")
-                if (exists==False):
-                    candidates.append(name)
+                #print("Found a task.")
+                #exists = self.service.exists(self.share, TASKS_DIR, name + ".lck")
+                #if (exists==False):
+                candidates.append(name)
         if len(candidates)>0:
             return random.choice(candidates)
         else:
@@ -62,7 +63,10 @@ class TaskManager():
     def executeTask(self, name):
         task_file_name = name + ".tsk"
         result_file_name = name + ".res"
-        
+
+        exists = self.service.exists(self.share, TASKS_DIR, name + ".lck")
+        if (exists==True):
+            return
         # make lck file
         self.service.create_file_from_text(self.share,TASKS_DIR,name + ".lck", "locked")
 

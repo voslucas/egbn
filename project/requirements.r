@@ -1,0 +1,6 @@
+install.packages('bnlearn')
+install.packages('rjson')
+install.packages('glmnet')
+install.packages('optigrab')
+install.packages("BiocManager")
+BiocManager::install("Rgraphviz")
