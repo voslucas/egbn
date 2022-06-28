@@ -7,7 +7,7 @@ from taskmanager import TaskManager
 taskManager = TaskManager("queue1")
 
 # Ik heb de 1000 geskipt voor nu.
-reps = range(1,5)
+reps = range(5,25)
 nodecounts = [10,100]
 datasizes = [50,500,5000]
 pints = [0.0,0.1,0.5]
