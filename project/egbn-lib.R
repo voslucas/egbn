@@ -14,9 +14,7 @@ egbn.randomcoefs = function(n){
   #      but this results in Infite values on large networks
   
   result <- sample(allowed_coefvalues,n) / 10.0
-  #result <- runif(n,min=-0.49,max=0.49)
-  #result <- runif(n,min=-0.099,max=0.099)
-  #result <- runif(n,min=-0.099,max=0.099)
+
 }
 
 # return a bic score of a LM based on augmented data

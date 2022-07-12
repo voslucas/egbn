@@ -1,5 +1,7 @@
 __pycache__/
 
+/oldresults/
+
 # History files
 .Rhistory
 .Rapp.history
