@@ -7,20 +7,20 @@ library(optigrab)
 
 
 # number of nodes in the DAG
-nodecount <- opt_get("nodecount", default=10, required=TRUE)
+nodecount <- opt_get("nodecount", default=100, required=TRUE)
 # size of the trainset
-datasize <- opt_get("datasize", default=5000,required=TRUE)
+datasize <- opt_get("datasize", default=50,required=TRUE)
 # chance of an interaction in a node formula 
-chance_int <- opt_get("pint", default=0.0,required=TRUE)
+chance_int <- opt_get("pint", default=0.1,required=TRUE)
 # chance of a power term in a node formula
-chance_pwr <- opt_get("ppwr",default=0.0,required=TRUE)
+chance_pwr <- opt_get("ppwr",default=0.1,required=TRUE)
 # maximum degree of a node ( in and out)
 max_degree <- opt_get("degree", default=3, required=TRUE)
 #
 mysd  <- opt_get("sd", default=0.5, required=TRUE)
 
 # when learning a DAG we specify a max degree
-max_degree_hc <- 10
+max_degree_hc <- Inf
 
 #Global experimental settings
 do_balance <- FALSE
@@ -36,6 +36,8 @@ output$datasize = datasize
 output$chance_int = chance_int
 output$chance_pwr = chance_pwr
 output$max_degree = max_degree
+output$samplemethod = 1
+output$version = 1
 
 # STEP 1 - create a DAG
 dag = random.graph(cnames, 
@@ -82,7 +84,7 @@ output$timing_ground = as.numeric(Sys.time()-start_time, units="secs")
 
 # STEP 4 - do a quick structurelearning with simple existing HillClimb
 start_time = Sys.time()
-testdag1 <- hc(trainset, maxp = max_degree_hc, score="bic-g", restart=1)
+testdag1 <- hc(trainset, maxp = max_degree_hc, score="bic-g")
 output$timing_hc0 = as.numeric(Sys.time()-start_time, units="secs")
 
 print("recoverd score on trainset with bic-g")
@@ -140,7 +142,7 @@ output$timing_method1_glm_aug_k = as.numeric(Sys.time()-start_time, units="secs"
 
 # STEP 5 - probeer nu een HillClimb met een custom score functie.
 start_time = Sys.time()
-testdag2 <- hc(trainset, maxp = max_degree_hc, score="custom" , fun=egbn.customscore , restart=1)
+testdag2 <- hc(trainset, maxp = max_degree_hc, score="custom" , fun=egbn.customscore)
 output$timing_hc2a = as.numeric(Sys.time()-start_time, units="secs")
 
 output$method2_hd = hamming(testdag2,myegbn)
@@ -186,7 +188,7 @@ output$timing_method2_glm_aug= as.numeric(Sys.time()-start_time, units="secs")
 if (nodecount<=10)
 {
   start_time = Sys.time()
-  testdag3 <- hc(trainset, maxp = max_degree_hc, score="custom" , fun=egbn.customscore_glm , restart=1)
+  testdag3 <- hc(trainset, maxp = max_degree_hc, score="custom" , fun=egbn.customscore_glm)
   output$timing_hc2b = as.numeric(Sys.time()-start_time, units="secs")
   output$method2b_hd = hamming(testdag3,myegbn)
   output$method2b_freenodes = length(egbn.getfreenodes(testdag3))

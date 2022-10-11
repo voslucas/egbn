@@ -2,8 +2,15 @@ library(bnlearn)
 library(Rgraphviz)
 library(glmnet)
 
-#Unused ; idea was to cache EGBN 
+#Unused ; idea was to cache EGBN to speed up things.
 cachedegbndata__ = NULL
+
+#Two ways to generate samples + coefs
+#Method 1 
+# coefs are from 9..9 and downscaled / 10
+# if interactions or powerterms occur, their terms are downscaled / 10.
+# sample method is unscaled 
+
 
 allowed_coefvalues <- -9:9
 allowed_coefvalues <- allowed_coefvalues[allowed_coefvalues!=0]
@@ -33,10 +40,9 @@ egbn.customscore = function(node, parents, data, args) {
      result <- -BIC(lm(model, data = workdata)) / 2.0
 }
 
-
-
-# TODO :this is SLOW.. 
+# TODO: this is SLOW.. 
 # it would benefit from an cached precalculated augmented dataset
+# it is unused in our report.
 egbn.customscore_glm = function(node, parents, data, args) 
 {
   
@@ -438,7 +444,7 @@ egbn.sample = function(egbn ,count, samplesd)
 
     df[, node] <- rnorm(count, eval(f,envir=df),samplesd)    
   
-    
+    #some tryouts to normalize/limit the growth of values.
     #means <- eval(f,envir=df)
     #if (length(means)==1){
     #  df[, node] <- rnorm(count, eval(f,envir=df),samplesd)

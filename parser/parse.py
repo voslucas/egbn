@@ -18,6 +18,7 @@ def getSDfromFileName(fname):
 
 def convert(fname):
     f = open(fname,"r")
+    print(fname)
     content = f.read()
     #we left a marker in the file +++ where we can split normal output from the json output.
     tmps = content.split("\"+++\"")

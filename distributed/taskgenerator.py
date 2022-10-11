@@ -6,9 +6,14 @@ import datetime
 from taskmanager import TaskManager 
 taskManager = TaskManager("queue1")
 
+#
 # Ik heb de 1000 geskipt voor nu.
+# 25 /7 ik geef de 1000 nodecount door.
+# 10 /9 de 1000 nodecount is te zwaar
+# 10 /9 starting nodecounts 20 en 50
+
 reps = range(1,50)
-nodecounts = [10,100]
+nodecounts = [20,50]
 datasizes = [50,500,5000]
 pints = [0.0,0.1,0.5]
 ppwrs = [0.0,0.1,0.5]

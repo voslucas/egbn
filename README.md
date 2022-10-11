@@ -2,7 +2,6 @@
 Extended Gaussian Bayesian Network
 
 
-
 # Distributed setup
 
 Some python scripts which use Azure Storage to store 'tasks' which are runned by taskrunner.py.
