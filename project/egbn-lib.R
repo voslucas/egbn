@@ -391,7 +391,7 @@ egbn.fit.per.node = function(cn, data, method = "lm", augment = FALSE){
     best_lambda <- cv_model$lambda.min
     
     best_model <- glmnet(data.matrix(workdata[dcols]), 
-                         data.matrix(workdata[cn$name]), alpha = 1, 
+                         data.matrix(workdata[cn$name]), alpha = 1,
                          lambda = best_lambda)
     
     #we have a model.. filter the coefs.
@@ -415,7 +415,6 @@ egbn.fit.per.node = function(cn, data, method = "lm", augment = FALSE){
   
   result <- cn
 }
-
 
 
 #Draw samples from the eGBN as a dataframe
@@ -582,6 +581,22 @@ egbn.augmentdata = function(data){
   }
   result <- data
 }
+
+egbn.mb = function(egbn) {
+  nodes = names(egbn$nodes)
+  result <- mean(sapply(nodes, function(n) { length(egbn$nodes[[n]]$mb) }))
+}
+
+egbn.nbr = function(egbn) {
+  nodes = names(egbn$nodes)
+  result <- mean(sapply(nodes, function(n) { length(egbn$nodes[[n]]$nbr) }))
+}
+
+egbn.branchfactor = function(egbn) {
+  nodes = names(egbn$nodes)
+  result <- mean(sapply(nodes, function(n) { length(egbn$nodes[[n]]$children) }))
+}
+
 
 
 # simple utility function 

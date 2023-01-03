@@ -2,6 +2,9 @@ __pycache__/
 
 /oldresults/
 
+*.xlsx
+
+
 # History files
 .Rhistory
 .Rapp.history

@@ -3,7 +3,7 @@ source("egbn-lib.R")
 
 # Global settings
 max_degree <- 3   # maximum degree of a node ( in and out)
-my_sd <- 0.1
+my_sd <- 0.5
 
 # How does trainset size / sample size effect Hamming Distance?
 
@@ -32,7 +32,7 @@ experiment2 = function(nodecount){
   
   sets = lapply(samplesizes, function(ss) egbn.sample(myegbn,ss,my_sd) )
   
-  newdags = lapply(sets, function (s) hc(s, maxp = max_degree+1, score="bic-g"))
+  newdags = lapply(sets, function (s) hc(s, score="bic-g"))
   
   hds = lapply(newdags, function (d) hamming(d,dag3))
   

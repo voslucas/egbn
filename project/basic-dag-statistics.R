@@ -1,13 +1,13 @@
 # Determine the average HammingDistance of two random DAGs 
 # both DAG's have exactly the number of nodes and same max_degree setting
 # runs 100 times
-# runs for numberofnodes from 10..100
+# runs for numberofnodes from 10,20, 50 and 100
 
 
 source("egbn-lib.R")
 
 # Global settings
-max_degree <- 3   # maximum degree of a node ( in and out)
+max_degree <- 7   # maximum degree of a node ( in and out)
 my_sd <- 1.0
 
 
@@ -31,7 +31,7 @@ experiment = function(nodecount) {
 }
 
 
-ncs = 10:20
+ncs = list(10,20,50,100)
 
 avghd = function(n) {
   tmp = replicate(100, experiment(n), simplify = "array")
