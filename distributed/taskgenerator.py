@@ -6,8 +6,9 @@ import datetime
 from taskmanager import TaskManager 
 taskManager = TaskManager("queue1")
 
+# all but 100..
 
-reps = range(1,2)
+reps = range(2,101)
 nodecounts = [10,20,50,100]
 datasizes = [50,500,5000]
 pints = [0.0,0.1,0.25]

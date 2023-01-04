@@ -40,6 +40,9 @@ egbn.customscore = function(node, parents, data, args) {
      result <- -BIC(lm(model, data = workdata)) / 2.0
 }
 
+
+
+
 # TODO: this is SLOW.. 
 # it would benefit from an cached precalculated augmented dataset
 # it is unused in our report.
@@ -415,6 +418,125 @@ egbn.fit.per.node = function(cn, data, method = "lm", augment = FALSE){
   
   result <- cn
 }
+
+
+
+# add formulas to the nodes.
+egbn.fitinline = function(egbn, data, method = "lm" , augment = FALSE)
+{
+  #check parameters
+  if (class(egbn) != "bn") {
+    stop("'egbn' should be of class 'bn' ")
+  }
+  if (class(data) != "data.frame") {
+    stop("'data' should be of class 'data.frame' ")
+  }
+  
+  #zoek per node een model (volgens method) wat de data fit.
+  nodes <- node.ordering(egbn)
+  
+  for (node in nodes) {
+    # get node object
+    cn <- egbn$nodes[[node]]
+    cn$name <- node
+    
+    # fit for deze node. 
+    # cn <- egbn.fit.per.node(cn, data, method, augment)
+    pc = length(cn$parents)
+    # select data fragment 
+    workdata = data[c(cn$parents)]
+    
+    # extend it , if augmentation is needed
+    if (augment & pc>0) {
+      workdata <- egbn.augmentdata(workdata)
+    }
+    
+    #columns of the data (parents + augmented)
+    dcols = colnames(workdata)
+    
+    # put the original data back in workdata
+    workdata[cn$name] = data[cn$name]
+    
+    # glm is only usefull when parents are at least 0 or 1 
+    # parentcount=0 
+    if (pc==0) {method="lm"}
+    if (pc==1 & augment==FALSE) {method="lm"}
+    if (method == "lm") {
+      # bepaal het linear model wat deze node zou kunnen zijn
+      # adhc aantal dcols
+      # Ex. dcols are A and B
+      # Ex. Coefnames= 1,A,B
+      
+      coefnames = c(c("1"),colnames(workdata[dcols]))
+      # Ex. Terms = 1+A+B
+      terms <- paste(coefnames,collapse = "+")
+      # Ex. Linearmodel description = " C ~ 1+A+B " 
+      lmdesc <- paste(cn$name," ~ ", terms)
+      # voer een linear model voor deze node uit
+      model <- lm(lmdesc, workdata)
+      # maak een complete formule ?
+      # Ex. modelcoefs = Intercept , A, B
+      modelcoefs <- coefficients(model)
+      # sometimes LM gives back NA's in their coef. 
+      # remove them.
+      modelcoefs <- modelcoefs[!is.na(modelcoefs)]
+      # Change Intercept to 1
+      if (names(modelcoefs)[1] == "(Intercept)") {
+        names(modelcoefs)[1] <- "1"
+      }
+      # Make a complete formula based on the named coefficients
+      # Ex. FittedFormula = 2.1  + 1.0*A + 1.1*B
+      fittedformula <- egbn.coefs2formula(modelcoefs)
+      #store fitted values 
+      cn$fittedformula <- fittedformula
+      cn$fittedvalues <- eval(parse(text=fittedformula),envir=workdata)
+      cn$fittedk <- length(modelcoefs)
+      
+    } else if (method=="glm")
+    {
+      # in this model , we use LASSO 
+      # zoek naar de lamba
+      cv_model <- cv.glmnet(data.matrix(workdata[dcols]), 
+                            data.matrix(workdata[cn$name]), alpha = 1)
+      
+      #find optimal lambda value that minimizes test MSE
+      best_lambda <- cv_model$lambda.min
+      
+      best_model <- glmnet(data.matrix(workdata[dcols]), 
+                           data.matrix(workdata[cn$name]), alpha = 1,
+                           lambda = best_lambda)
+      
+      #we have a model.. filter the coefs.
+      ctemp <- coefficients(best_model)[,1]
+      ctempfilter <- ctemp[ctemp!=0]
+      #replace the term Intercept, if needed. (sometimes there is not intercept)
+      if (names(ctempfilter)[1] == "(Intercept)") {
+        names(ctempfilter)[1] <- "1"
+      }
+      
+      fittedformula <- egbn.coefs2formula(ctempfilter)
+      
+      cn$fittedformula <- fittedformula
+      cn$fittedvalues <- eval(parse(text=fittedformula),envir=workdata)
+      cn$fittedk <- length(ctempfilter)
+      
+      
+    } else {
+      stop(paste(method," is not an implemented method."))
+    }
+    
+    # sla node weer terug op
+    egbn$nodes[[node]] <- cn
+  }
+  #return fitted egbn
+  #return the extend GBN, a BN with node models 
+  egbn$fitted = TRUE
+  egbn$fitted_method = method
+  egbn$fitted_augmented = augment
+  result <- egbn
+}
+
+
 
 
 #Draw samples from the eGBN as a dataframe

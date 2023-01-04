@@ -8,9 +8,9 @@ library(optigrab)
 
 
 # number of nodes in the DAG
-nodecount <- opt_get("nodecount", default=10, required=TRUE)
+nodecount <- opt_get("nodecount", default=50, required=TRUE)
 # size of the trainset
-datasize <- opt_get("datasize", default=50,required=TRUE)
+datasize <- opt_get("datasize", default=500,required=TRUE)
 # chance of an interaction in a node formula 
 chance_int <- opt_get("pint", default=0.0,required=TRUE)
 # chance of a power term in a node formula
@@ -74,9 +74,7 @@ output$timing_generatetrainset = as.numeric(Sys.time()-start_time, units="secs")
 
 print("ground scores on trainset")
 start_time = Sys.time()
-
-fitted <- egbn.fit(myegbn, trainset,  method="lm" , augment = FALSE)
-
+fitted <- egbn.fitinline(myegbn, trainset,  method="lm" , augment = FALSE)
 output$ground_loglik     = egbn.score(fitted ,testset)
 output$ground_bicg       = egbn.score(fitted, testset,  method= "bic-g")
 output$ground_bicg_train = egbn.score(fitted, trainset, method= "bic-g")
@@ -84,7 +82,6 @@ output$ground_arcs = length(arcs(myegbn))
 output$ground_mb   = egbn.mb(myegbn)
 output$ground_nbr  = egbn.nbr(myegbn)
 output$ground_bf   = egbn.branchfactor(myegbn)
-
 output$timing_ground = as.numeric(Sys.time()-start_time, units="secs")
 
 # STEP 4 - do a quick structurelearning with simple existing HillClimb
@@ -106,7 +103,7 @@ output$timing_hc0 = as.numeric(Sys.time()-start_time, units="secs")
 
 #LM FIT , no augmentation
 start_time = Sys.time()
-fitted <- egbn.fit(hc0, trainset,  method="lm" , augment = FALSE)
+fitted <- egbn.fitinline(hc0, trainset,  method="lm" , augment = FALSE)
 output$m0_loglik     = egbn.score(fitted, testset )
 output$m0_bicg       = egbn.score(fitted, testset, method = "bic-g")
 output$m0_bicg_train = egbn.score(fitted, trainset, method = "bic-g")
@@ -117,7 +114,7 @@ output$timing_m0 = as.numeric(Sys.time()-start_time, units="secs")
 
 #GLM FIT ,aug 
 start_time = Sys.time()
-fitted <- egbn.fit(hc0, trainset,  method="glm", augment = TRUE)
+fitted <- egbn.fitinline(hc0, trainset,  method="glm", augment = TRUE)
 output$m1_loglik     = egbn.score(fitted, testset )
 output$m1_bicg       = egbn.score(fitted, testset, method = "bic-g")
 output$m1_bicg_train = egbn.score(fitted, trainset, method = "bic-g")
@@ -130,7 +127,6 @@ output$timing_m1 = as.numeric(Sys.time()-start_time, units="secs")
 # STEP 5 - probeer nu een HillClimb met een Custom score functie.
 start_time = Sys.time()
 hc2 <- hc(trainset, maxp = max_degree_hc, score="custom" , fun=egbn.customscore)
-
 output$hc2_arcs = length(arcs(hc2))
 output$hc2_mb   = egbn.mb(hc2)
 output$hc2_nbr  = egbn.nbr(hc2)
@@ -144,7 +140,7 @@ output$timing_hc2 = as.numeric(Sys.time()-start_time, units="secs")
 
 #LM FIT , no augmentation
 start_time = Sys.time()
-fitted <- egbn.fit(hc2, trainset,  method="lm" , augment = FALSE)
+fitted <- egbn.fitinline(hc2, trainset,  method="lm" , augment = FALSE)
 output$m2_loglik     = egbn.score(fitted, testset )
 output$m2_bicg       = egbn.score(fitted, testset, method = "bic-g")
 output$m2_bicg_train = egbn.score(fitted, trainset, method = "bic-g")
@@ -155,7 +151,7 @@ output$timing_m2     = as.numeric(Sys.time()-start_time, units="secs")
 
 #GLM FIT ,aug 
 start_time = Sys.time()
-fitted <- egbn.fit(hc2, trainset,  method="glm", augment = TRUE)
+fitted <- egbn.fitinline(hc2, trainset,  method="glm", augment = TRUE)
 output$m3_loglik     = egbn.score(fitted, testset )
 output$m3_bicg       = egbn.score(fitted, testset, method = "bic-g")
 output$m3_bicg_train = egbn.score(fitted, trainset, method = "bic-g")
@@ -163,7 +159,6 @@ output$m3_k          = egbn.getk(fitted)
 output$m3_interactionnodes = egbn.getnodeswithinteraction(fitted)
 output$m3_powernodes       = egbn.getnodeswithpower(fitted)
 output$timing_m3           = as.numeric(Sys.time()-start_time, units="secs")
-
 
 
 #OUTPUT 

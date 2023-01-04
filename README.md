@@ -16,7 +16,9 @@ https://docs.microsoft.com/nl-nl/azure/storage/common/storage-use-azcopy-v10
 
 download the results from azure storage to rawresults folder.
 
-.\bin\azcopy.exe copy "https://egbntasks.file.core.windows.net/queue1/results/*?sv=2021-06-08&ss=bfqt&srt=sco&sp=rwdlacupitfx&se=2023-06-24T04:59:59Z&st=2022-06-23T20:59:59Z&spr=https&sig=iVu9UxCTdUc1LO9n%2FNuVu4Ueq9jWEk2ThAJvlypwxxQ%3D" rawresults
+.\bin\azcopy.exe copy "https://egbntasks.file.core.windows.net/queue1/results/*?sv=2021-06-08&ss=bfqt&srt=sco&sp=rwdlacupiytfx&se=2024-01-04T16:21:23Z&st=2023-01-04T08:21:23Z&spr=https&sig=DQdl%2Ft6KumdzLwTNuX%2FlzrrP%2FEfRZPj6ik11gl%2Fiuv4%3D" rawresults
+
+
 
 # Parsing the results
 
