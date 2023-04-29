@@ -1,3 +1,5 @@
+#(c) Lucas Vos - 2022
+
 library(bnlearn)
 library(Rgraphviz)
 library(glmnet)
@@ -10,7 +12,6 @@ cachedegbndata__ = NULL
 # coefs are from 9..9 and downscaled / 10
 # if interactions or powerterms occur, their terms are downscaled / 10.
 # sample method is unscaled 
-
 
 allowed_coefvalues <- -9:9
 allowed_coefvalues <- allowed_coefvalues[allowed_coefvalues!=0]
@@ -35,13 +36,46 @@ egbn.customscore = function(node, parents, data, args) {
      else     
           model = as.formula(paste(node, "~", paste(names(workdata), collapse = "+")))
     
+     
      #extend workdata with node data
      workdata[node] = data[node]
+    
      result <- -BIC(lm(model, data = workdata)) / 2.0
 }
 
-
-
+# return a score of a LM based on augmented data
+egbn.customscore3 = function(node, parents, data, args) {
+  
+  workdata = data[parents]
+  workdata = egbn.augmentdata(workdata)
+  
+  if (length(parents) == 0)
+    model = as.formula(paste(node, "~ 1"))     
+  else     
+    model = as.formula(paste(node, "~", paste(names(workdata), collapse = "+")))
+  
+  
+  #extend workdata with node data
+  workdata[node] = data[node]
+  
+  #v3 normal BIC penalitizes over all parameters.
+  #   which is a bit unfair considering we augment the node 
+  #   on our side
+  #   we gonna return a BIC like value based on only the parents
+  #   not the augmented data.
+  
+  # Documentation says
+  # logLik(X) - k * nparams(x)
+  # where k = log (nrow(data)) /2
+  # nparams(x) = 
+  # in case of nonaugement (2+length(parents))
+  
+  lm = lm(model, data = workdata)
+  ll = logLik(lm)[1]
+  penalty = (log(nrow(workdata)) /2) * (2+length(parents))
+  
+  result <- (ll-penalty)
+}
 
 # TODO: this is SLOW.. 
 # it would benefit from an cached precalculated augmented dataset
@@ -164,7 +198,7 @@ egbn.addmodels = function(net, p_pwr, p_int){
     
     #scale down coefs when there interaction or power terms.
     if (scaledown) {
-      coefs = coefs/10.0
+      #coefs = coefs/10.0
     }
     
     #store the coefs and the model (formula of the mean), into the node 

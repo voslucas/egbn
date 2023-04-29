@@ -22,22 +22,26 @@ def convert(fname):
     content = f.read()
     #we left a marker in the file +++ where we can split normal output from the json output.
     tmps = content.split("\"+++\"")
-    #skip 5 characters, because the string starts with "[1] .. "  as normal with Rscript output.  
-    json_str = tmps[1][5:]
-    #het parsen moet 2x .. want 1e keer stript ie alleen de "" eraf.. 
-    data = json.loads(json_str)
-    data2 = json.loads(data)
 
-    #breng alle lists die in data2 zitten , terug naar een simpele string
-    listCols = [i for i in data2.keys() if isinstance(data2[i], list)]
-    for listCol in listCols:
-        data2[listCol] = ";".join(data2[listCol])
+    if (len(tmps)==2):
+        #skip 5 characters, because the string starts with "[1] .. "  as normal with Rscript output.  
+        json_str = tmps[1][5:]
+        #het parsen moet 2x .. want 1e keer stript ie alleen de "" eraf.. 
+        data = json.loads(json_str)
+        data2 = json.loads(data)
 
-    #we zijn vergeten om de gebruikte SD ook in de JSON output op te slaan, maar gelukkig zit die wel in de filename.
-    mysd = getSDfromFileName(fname)
-    data2["sd"] = mysd
+        #breng alle lists die in data2 zitten , terug naar een simpele string
+        listCols = [i for i in data2.keys() if isinstance(data2[i], list)]
+        for listCol in listCols:
+            data2[listCol] = ";".join(data2[listCol])
 
-    return data2
+        #we zijn vergeten om de gebruikte SD ook in de JSON output op te slaan, maar gelukkig zit die wel in de filename.
+        mysd = getSDfromFileName(fname)
+        data2["sd"] = mysd
+
+        return data2
+    else:
+        return None
 
 
 dictCollection = []
@@ -46,15 +50,14 @@ dictCollection = []
 for file in os.listdir("rawresults"):
     if file.endswith(".res"):
         df= convert("rawresults/"+file)
-        dictCollection.append(df)
+        if (df!=None):
+            dictCollection.append(df)
 
 
 #maak een dataframe van onze dictionaries
 dffinal = DataFrame(dictCollection)
 
 dffinal.to_pickle("results.pickle")
-dffinal.to_excel("result.xls")
+dffinal.to_excel("result.xlsx")
 
 
-print(dffinal)
-print("hello")

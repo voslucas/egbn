@@ -29,7 +29,7 @@ RESULTS_DIR = 'results'
 class TaskManager():
     def __init__(self, queue):
         #read config
-        self.account = CloudStorageAccount(account_name="egbntasks", sas_token=SAS)
+        self.account = CloudStorageAccount(account_name="egbnstorage", sas_token=SAS)
         self.service = self.account.create_file_service()
         self.share = queue
         self.service.create_share(self.share, fail_on_exist=False)

@@ -1,3 +1,5 @@
+#(c) Lucas Vos - 2022
+
 #Run a datacollection
 #Experimental settings come from the commandline args
 #VERSION 2.0
@@ -87,10 +89,6 @@ output$timing_ground = as.numeric(Sys.time()-start_time, units="secs")
 # STEP 4 - do a quick structurelearning with simple existing HillClimb
 start_time = Sys.time()
 hc0 <- hc(trainset, maxp = max_degree_hc, score="bic-g")
-output$timing_hc0 = as.numeric(Sys.time()-start_time, units="secs")
-
-print("recoverd score on trainset with bic-g")
-start_time = Sys.time()
 output$hc0_arcs = length(arcs(hc0))
 output$hc0_mb   = egbn.mb(hc0)
 output$hc0_nbr  = egbn.nbr(hc0)
